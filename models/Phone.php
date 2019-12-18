@@ -1,8 +1,8 @@
 <?php
 
-require_once 'Model.php'
+require_once 'Model.php';
 
-class Email extends Model
+class Phone extends Model
 {
     protected $table = 'phone_numbers';
 

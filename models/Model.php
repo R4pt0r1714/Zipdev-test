@@ -1,6 +1,6 @@
 <?php
 
-require_once 'DatabaseConnection.php';
+require_once '../utils/DatabaseConnection.php';
 
 abstract class Model
 {
@@ -22,28 +22,28 @@ abstract class Model
 
     public function __get($property)
     {
-        return $this->properties[$property]:
+        return $this->properties[$property];
     }
 
     public function __set($property, $value)
     {
-        return $this->properties[$property] = $value:
+        return $this->properties[$property] = $value;
     }
 
     public function save()
     {
-        $fields = implode(',', $this->fields);
+        $fields = implode(', ', $this->fields);
         $values = ':'.implode(', :', $this->fields);
 
-        $sql = 'INSERT INTO '.$this->table.' ('.$fields.') VALUES ('.$values.')';
-
+        $sql = 'INSERT INTO '.$this->table.' ( '.$fields.' ) VALUES ( '.$values.' )';
+      
         $stmt = $this->db->prepare($sql);
         $stmt->execute($this->properties);
     }
 
     public function delete()
     {
-        $sql = 'DELETE FROM '.$this->table.' WHERE '.$this->primaryKey'. = :'.$this->primaryKey.' ;';
+        $sql = 'DELETE FROM '.$this->table.' WHERE '.$this->primaryKey.'. = :'.$this->primaryKey.' ;';
         $stmt = $this->db->prepare($sql);
         $stmt->execute($this->properties);
     }
