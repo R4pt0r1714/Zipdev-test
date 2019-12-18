@@ -65,15 +65,21 @@ abstract class Model
     {
         $stmt = $pdo->prepare('SELECT * FROM '.$this->table.' WHERE '.$this->primaryKey.' = :'.$this->primaryKey.' ;');
         $stmt->execute([$this->primaryKey => $id]);
-        $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        $rows = $stmt->fetch(PDO::FETCH_ASSOC);
 
         foreach ($rows as $key => $value) {
             $this->properties[$key] = $value;
         }
+
+        return $this->properties;
     }
 
     public static function where($field, $value)
     {
+        $stmt = $pdo->prepare('SELECT * FROM '.$this->table.' WHERE :field = :value ;');
+        $stmt->execute(['field' => $field, 'value' => $value]);
+        $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
+        return $this->properties;
     }
 }
