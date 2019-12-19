@@ -7,7 +7,7 @@ class Contact extends Model
     protected $table = 'contacts';
 
     protected $fields = [
-        'first_name', 'surnames'
+        'first_name', 'surnames', 'photo'
     ];
 
     protected $primaryKey = 'id_contact';

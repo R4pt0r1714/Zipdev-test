@@ -10,12 +10,13 @@ abstract class Model
     protected $fields;
     protected $primaryKey;
 
-    public function __construct($properties = null)
+    public function __construct(array $properties = null)
     {
         $this->db = new DatabaseConnection();
+        $this->$properties = array();
 
         if(!is_null($properties)){
-            $this->$properties = $properties;
+            $this->properties = $properties;
             $this->save();
         }
     }
@@ -32,40 +33,77 @@ abstract class Model
 
     public function save()
     {
-        $fields = implode(', ', $this->fields);
-        $values = ':'.implode(', :', $this->fields);
+        $parameters = array_intersect_key($this->properties, array_flip($this->fields));
 
-        $sql = 'INSERT INTO '.$this->table.' ( '.$fields.' ) VALUES ( '.$values.' )';
-      
-        $stmt = $this->db->prepare($sql);
-        $stmt->execute($this->properties);
+        $fields = implode(', ', array_flip($parameters));
+        $values = ':'.implode(', :', array_flip($parameters));
+
+        try {
+            $sql = 'INSERT INTO '.$this->table.' ( '.$fields.' ) VALUES ( '.$values.' )';
+            $stmt = $this->db->prepare($sql);
+            $stmt->execute($parameters);
+            self::find($this->db->lastInsertId());
+
+        }catch(\PDOException $ex){
+            http_response_code(500);
+            echo json_encode(array('message' => $sql));
+            exit(0);
+        }
     }
 
     public function delete()
     {
-        $sql = 'DELETE FROM '.$this->table.' WHERE '.$this->primaryKey.'. = :'.$this->primaryKey.' ;';
-        $stmt = $this->db->prepare($sql);
-        $stmt->execute($this->properties);
+        $parameters = array_intersect_key($this->properties, array($this->primaryKey => 0));
+
+        try {
+            $sql = 'DELETE FROM '.$this->table.' WHERE '.$this->primaryKey.' = :'.$this->primaryKey.' ;';
+            $stmt = $this->db->prepare($sql);
+            $stmt->execute($parameters);
+
+        }catch(\PDOException $ex){
+            http_response_code(500);
+            echo json_encode(array('message' => $ex->getMessage()));
+            exit(0);
+        }
     }
 
-    public function update()
+    public function update(array $updateValues)
     {
         $fieldSet = '';
 
-        foreach($this->fields as $field){
-            $fieldSet .= $fieldSet.' = :'.$fieldSet.', ';
+        $parameters = array_intersect_key($updateValues, array_flip($this->fields));
+
+        foreach($parameters as $key => $field){
+            $fieldSet .= $key.' = :'.$key.', ';
         }
 
-        $sql = 'UPDATE '.$this->table.' SET '.substr($fieldSet, 0, -1).' WHERE '.$this->primaryKey.' = :'.$this->primaryKey.' ;';
-        $stmt = $this->db->prepare($sql);
-        $stmt->execute($this->properties);
+        $parameters[$this->primaryKey] = $this->properties[$this->primaryKey];
+
+        try {
+            $sql = 'UPDATE '.$this->table.' SET '.substr($fieldSet, 0, -2).' WHERE '.$this->primaryKey.' = :'.$this->primaryKey.' ;';
+            $stmt = $this->db->prepare($sql);
+            $stmt->execute($parameters);
+
+        }catch(\PDOException $ex){
+            http_response_code(500);
+            echo json_encode(array('message' => $ex->getMessage()));
+            exit(0);
+        }
     }
 
-    public static function find($id)
+    public function find($id)
     {
-        $stmt = $pdo->prepare('SELECT * FROM '.$this->table.' WHERE '.$this->primaryKey.' = :'.$this->primaryKey.' ;');
-        $stmt->execute([$this->primaryKey => $id]);
-        $rows = $stmt->fetch(PDO::FETCH_ASSOC);
+        try {
+            $sql = 'SELECT * FROM '.$this->table.' WHERE '.$this->primaryKey.' = :'.$this->primaryKey.' ;';
+            $stmt = $this->db->prepare($sql);
+            $stmt->execute(array($this->primaryKey => $id));
+            $rows = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        }catch(\PDOException $ex){
+            http_response_code(500);
+            echo json_encode(array('message' => $ex->getMessage()));
+            exit(0);
+        }
 
         foreach ($rows as $key => $value) {
             $this->properties[$key] = $value;
@@ -74,12 +112,25 @@ abstract class Model
         return $this->properties;
     }
 
-    public static function where($field, $value)
+    public function where($field, $value)
     {
-        $stmt = $pdo->prepare('SELECT * FROM '.$this->table.' WHERE :field = :value ;');
-        $stmt->execute(['field' => $field, 'value' => $value]);
-        $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        try {
+            $sql = 'SELECT * FROM '.$this->table.' WHERE '.$field.' = :param ;';
+            $stmt = $this->db->prepare($sql);
+            $stmt->execute(array('param' => $value));
+            $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
+        }catch(\PDOException $ex){
+            http_response_code(500);
+            echo json_encode(array('message' => $ex->getMessage()));
+            exit(0);
+        }
+
+        return $rows;
+    }
+
+    public function getProperties()
+    {
         return $this->properties;
     }
 }
